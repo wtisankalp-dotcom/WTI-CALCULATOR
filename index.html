@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="WTI Calc">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>WELD TECH INDIA</title>
+<style>
+:root{--bg:#000;--card:#111;--ink:#f4f1ec;--mut:#8f887d;--line:#2a2824;--acc:#e08a3c;--accink:#120a02;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:#000}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:480px;margin:0 auto;padding:16px}
+header{text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--line);margin-bottom:14px}
+h1{font-size:24px;letter-spacing:.14em;margin:0;color:var(--acc)}
+header p{margin:4px 0 0;color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--mut);margin:0 0 4px;text-transform:uppercase;letter-spacing:.04em}
+select,input{width:100%;font:inherit;font-size:17px;padding:11px;border:1px solid var(--line);border-radius:10px;background:#000;color:var(--ink)}
+.row{display:flex;gap:10px;margin-bottom:12px}.row>div{flex:1;min-width:0}
+.row:last-child{margin-bottom:0}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1 1 30%;padding:10px 4px;border:1px solid var(--line);background:#000;color:var(--ink);border-radius:10px;font:inherit;font-size:14px}
+.seg button.on{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:600}
+.res{text-align:center}
+.big{font-size:38px;font-weight:700;color:var(--acc);margin:2px 0}
+.sub{color:var(--mut);font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;text-align:left}
+.grid div{background:#000;border:1px solid var(--line);border-radius:10px;padding:10px}
+.grid b{display:block;font-size:18px}
+.note{font-size:12px;color:var(--mut);text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<main>
+<header><h1>WELD TECH INDIA</h1><p>Chromium Zirconium Copper (CuCrZr) weight calculator</p></header>
+
+<div class="card">
+  <label>Shape</label>
+  <div class="seg" id="shapes"></div>
+</div>
+
+<div class="card">
+  <div class="row" id="dims"></div>
+  <div class="row">
+    <div><label>Length</label><input id="len" type="number" inputmode="decimal" step="any"></div>
+    <div><label>Length unit</label><select id="lu"><option value="1">mm</option><option value="1000" selected>m</option><option value="25.4">in</option><option value="304.8">ft</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>Quantity</label><input id="qty" type="number" inputmode="numeric" value="1" min="1"></div>
+    <div><label>Size unit</label><select id="du"><option value="1">mm</option><option value="25.4">in</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>Density g/cm³</label><input id="den" type="number" inputmode="decimal" step="any" value="8.89"></div>
+    <div><label>Price / kg (₹)</label><input id="price" type="number" inputmode="decimal" step="any"></div>
+  </div>
+</div>
+
+<div class="card res">
+  <div class="sub">Total weight</div>
+  <div class="big" id="tot">0.000 kg</div>
+  <div class="grid">
+    <div><span class="sub">Per piece</span><b id="per">–</b></div>
+    <div><span class="sub">Per metre</span><b id="pm">–</b></div>
+    <div><span class="sub">Total (lb)</span><b id="lb">–</b></div>
+    <div><span class="sub">Total cost</span><b id="cost">–</b></div>
+  </div>
+</div>
+<div class="note">Theoretical weight from nominal density. Actual stock varies with tolerance.</div>
+</main>
+
+<script>
+var SHAPES={
+ round:{n:"Round bar",f:[["d","Diameter"]],a:function(v){return Math.PI/4*v.d*v.d}},
+ square:{n:"Square bar",f:[["a","Side"]],a:function(v){return v.a*v.a}},
+ hex:{n:"Hex bar",f:[["a","Across flats"]],a:function(v){return Math.sqrt(3)/2*v.a*v.a}},
+ flat:{n:"Flat / plate",f:[["w","Width"],["t","Thickness"]],a:function(v){return v.w*v.t}},
+ pipe:{n:"Pipe / tube",f:[["d","Outer dia."],["t","Wall"]],a:function(v){var i=v.d-2*v.t;return i<0?0:Math.PI/4*(v.d*v.d-i*i)}}
+};
+var S={shape:"round",vals:{}};
+var $=function(i){return document.getElementById(i)};
+function load(){try{var s=localStorage.getItem("wti_cucrzr");if(s){var o=JSON.parse(s);if(o&&SHAPES[o.shape])S=o}}catch(e){}}
+function save(){try{localStorage.setItem("wti_cucrzr",JSON.stringify(S))}catch(e){}}
+function buildShapes(){var h=$("shapes");h.innerHTML="";Object.keys(SHAPES).forEach(function(k){var b=document.createElement("button");b.textContent=SHAPES[k].n;b.className=k===S.shape?"on":"";b.onclick=function(){S.shape=k;buildShapes();buildDims();calc()};h.appendChild(b)})}
+function buildDims(){var d=$("dims");d.innerHTML="";SHAPES[S.shape].f.forEach(function(f){var w=document.createElement("div");w.innerHTML='<label>'+f[1]+'</label><input type="number" inputmode="decimal" step="any">';var i=w.querySelector("input");i.value=S.vals[f[0]]||"";i.oninput=function(){S.vals[f[0]]=i.value;calc()};d.appendChild(w)})}
+function num(x){var n=parseFloat(x);return isNaN(n)?0:n}
+function fmt(x,u){return x?x.toLocaleString("en-IN",{minimumFractionDigits:3,maximumFractionDigits:3})+(u||""):"–"}
+function calc(){
+ var dens=num($("den").value),du=num($("du").value),lu=num($("lu").value),v={};
+ SHAPES[S.shape].f.forEach(function(f){v[f[0]]=num(S.vals[f[0]])*du});
+ var area=SHAPES[S.shape].a(v);
+ var L=num($("len").value)*lu,q=Math.max(1,num($("qty").value)||1);
+ var pm=area*1000*dens/1e6,per=area*L*dens/1e6,tot=per*q;
+ $("tot").textContent=tot?tot.toLocaleString("en-IN",{minimumFractionDigits:3,maximumFractionDigits:3})+" kg":"0.000 kg";
+ $("per").textContent=fmt(per," kg");$("pm").textContent=fmt(pm," kg");$("lb").textContent=fmt(tot*2.20462," lb");
+ var p=num($("price").value);
+ $("cost").textContent=(p&&tot)?"₹ "+(tot*p).toLocaleString("en-IN",{maximumFractionDigits:0}):"–";
+ S.len=$("len").value;S.lu=$("lu").value;S.du=$("du").value;S.qty=$("qty").value;S.price=$("price").value;S.den=$("den").value;save();
+}
+load();
+$("len").value=S.len||"";$("lu").value=S.lu||"1000";$("du").value=S.du||"1";$("qty").value=S.qty||1;$("price").value=S.price||"";$("den").value=S.den||"8.89";
+["den","len","lu","du","qty","price"].forEach(function(i){$(i).oninput=calc;$(i).onchange=calc});
+buildShapes();buildDims();calc();
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+</script>
+</body>
+</html>
